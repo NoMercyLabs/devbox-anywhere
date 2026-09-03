@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+# Shell scripts and container files run inside Linux containers. A CRLF line ending on the shebang
+# line makes the kernel look for an interpreter named "bash\r", which fails with a bare
+# "no such file or directory" that names the wrong thing.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.example text eol=lf

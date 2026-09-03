@@ -1,0 +1,101 @@
+# Devbox compose file. Fill the <...> markers; delete the cache volumes this project does not use.
+#
+# Kept SEPARATE from the project's own compose file: that one runs the application, this one runs
+# the editor. Merging them means you cannot restart one without the other, and the editor ends up
+# in the application's dependency graph.
+#
+#   docker compose -f devbox/docker-compose.yml up -d --build
+#   open http://localhost:8443
+
+name: <project>-devbox
+
+services:
+  devbox:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Match the host user, or every file the box writes into the bind-mounted repo comes out
+        # owned by root on Linux hosts. Set from `id -u` / `id -g`.
+        USER_UID: ${DEVBOX_UID:-1000}
+        USER_GID: ${DEVBOX_GID:-1000}
+    image: <project>-devbox:local
+    container_name: <project>-devbox
+    restart: unless-stopped
+    # PID 1 reaper. Without it, processes the editor spawns and abandons (language servers,
+    # watchers) accumulate as zombies for the life of the container.
+    init: true
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # code-server's login password. Empty makes code-server generate one into a config file
+      # inside the container, where the user then has to go looking for it.
+      PASSWORD: ${DEVBOX_PASSWORD:-}
+      DEVBOX_ENABLE_SSH: ${DEVBOX_ENABLE_SSH:-1}
+      DEVBOX_WORKSPACE: /workspace
+      # Tool NAMES only - the first terminal reports which of these still need a login. No
+      # credential travels through this variable; see assets/auth-onboarding.sh.
+      DEVBOX_AUTH: "git,gh"
+      # Runs once per container start, before the editor. Tool restore, dependency install, codegen.
+      DEVBOX_BOOTSTRAP: "<e.g. cd /workspace && npm ci>"
+      TZ: ${TZ:-UTC}
+      #
+      # Dependency caches on the persisted volumes below, so a rebuild never re-downloads them.
+      # <e.g. NPM_CONFIG_CACHE: /home/dev/.npm>
+      #
+      # Build OUTPUT off the bind mount. Sharing an output directory with host builds fails: those
+      # files carry the host's ownership, and Docker Desktop's file sharing refuses the timestamp
+      # updates a build makes (.NET reports MSB3374). Point the toolchain somewhere else and give
+      # that path a volume.
+      # <e.g. ArtifactsPath: /home/dev/artifacts>
+      #
+      # A container sees the HOST's total RAM, so build daemons size their heaps for a machine they
+      # do not have and get OOM-killed - which surfaces as a compiler crash, not as an OOM.
+      # <e.g. GRADLE_OPTS / NODE_OPTIONS / JAVA_TOOL_OPTIONS>
+      #
+      # No credential variables here. The user logs in inside the box, so each credential is scoped
+      # there and revocable on its own. Read references/security.md before changing this.
+    ports:
+      - "${DEVBOX_PORT:-8443}:8080"      # code-server
+      - "${DEVBOX_SSH_PORT:-2222}:2222"  # Remote-SSH
+      # One line per port this project's dev servers bind, so behaviour inside the box matches
+      # behaviour outside it.
+    volumes:
+      - ..:/workspace
+      # /home holds editor state and caches. Volumes, not image layers, so a rebuild keeps them.
+      - devbox-home:/home/dev
+      - devbox-extensions:/home/dev/.local/share/code-server
+      - devbox-vscode-server:/home/dev/.vscode-server
+      # One per ecosystem this project uses. Every path here must also be created in the Dockerfile,
+      # or the volume mounts root-owned.
+      # - devbox-<cache>:/home/dev/<path>
+      #
+      # Public keys for Remote-SSH. Read-only, and the directory holds public keys only.
+      - ./ssh:/home/dev/.ssh-host:ro
+      # Git identity (name and email). Not a credential file, and mounted read-only.
+      - ${DEVBOX_GITCONFIG:-~/.gitconfig}:/home/dev/.gitconfig:ro
+      #
+      # OPT-IN: the host's docker socket, for running the project's own compose stack from inside
+      # the box as sibling containers. This grants root-equivalent control of the host to anything
+      # in this container - read references/security.md before uncommenting, and never combine it
+      # with exposing the box to other people without both locks described there.
+      # - /var/run/docker.sock:/var/run/docker.sock
+    # A runaway build should take down the build, not the machine. Raise if a build genuinely needs
+    # more than this.
+    mem_limit: ${DEVBOX_MEM_LIMIT:-8g}
+    # Test runners that spawn browsers crash on the default 64MB /dev/shm.
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      # First start does extension installs and the bootstrap; without the grace period the
+      # container reports unhealthy while it is still legitimately setting up.
+      start_period: 40s
+
+volumes:
+  devbox-home:
+  devbox-extensions:
+  devbox-vscode-server:

@@ -1,0 +1,34 @@
+{
+  // Local VS Code attaches to the SAME container the browser editor runs in - one image, one set
+  // of caches, one definition. Command palette -> "Dev Containers: Reopen in Container".
+  "name": "<project> Devbox",
+  "dockerComposeFile": ["../devbox/docker-compose.yml"],
+  "service": "devbox",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "dev",
+
+  // Keep the image's own entrypoint running, so the browser editor stays reachable while you work
+  // in the desktop one. Overriding it would replace code-server with a sleep.
+  "overrideCommand": false,
+
+  // Leave the container up when the window closes. Long-running dev servers and the browser editor
+  // survive an editor restart.
+  "shutdownAction": "none",
+
+  // The same login report the first terminal shows, for people who never open one.
+  "postAttachCommand": "devbox-auth",
+
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": { "label": "code-server", "onAutoForward": "silent" }
+  },
+
+  "customizations": {
+    "vscode": {
+      // MARKETPLACE ids. devbox/settings/extensions.txt uses Open VSX ids for code-server; the two
+      // registries name some extensions differently and Open VSX lacks others entirely, so these
+      // are two lists on purpose - same picks, correct ids for each host.
+      "extensions": []
+    }
+  }
+}

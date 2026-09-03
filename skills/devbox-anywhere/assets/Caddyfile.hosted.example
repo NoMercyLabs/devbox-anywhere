@@ -1,0 +1,29 @@
+# OPTIONAL - only for putting the devbox on a shared host so a second person can reach it.
+# Merge this block into that host's Caddy config. Keep it out of the project's own reverse-proxy
+# config: that one serves the application, and an editor must never grow onto it by accident.
+#
+# READ THIS FIRST. A devbox is a shell on a machine holding your source. If the docker socket is
+# mounted, it is also root-equivalent control of the host. Exposing it needs BOTH locks:
+#   1. TLS plus the auth gate below
+#   2. code-server's own password (DEVBOX_PASSWORD in devbox/.env)
+#
+# Generate the hash with:  docker run --rm caddy caddy hash-password --plaintext 'secret'
+
+devbox.example.com {
+	# Delete this matcher to open the box to the internet. Do that only with a credential you
+	# trust and a clear reason - a LAN or VPN restriction is the cheapest real protection here.
+	@allowed remote_ip 192.168.0.0/16
+
+	basic_auth {
+		<user> <bcrypt hash from caddy hash-password>
+	}
+
+	reverse_proxy <devbox container name>:8080 {
+		# code-server is a WebSocket application. Caddy proxies the upgrade natively, but the
+		# long-lived terminal and file-watcher sockets are idle for long stretches and get cut by
+		# the default read timeout.
+		transport http {
+			read_timeout 0
+		}
+	}
+}
