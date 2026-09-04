@@ -2,6 +2,7 @@
 
 ## Contents
 
+- Settings the container needs, whatever the host says
 - Where the config lives
 - Inherit: look and feel
 - Filter: extensions
@@ -12,6 +13,25 @@
 Two independent jobs. **Look and feel is inherited wholesale** — it is personal, and a devbox
 that looks foreign is one people avoid. **Extensions are inherited then filtered** — the user's
 machine carries every stack they have ever touched, and the devbox carries only this project's.
+
+## Settings the container needs, whatever the host says
+
+Inheritance is the second job, not the first. Start from `assets/settings.json` — the container
+baseline — and merge the user's look and feel **on top of** it. Those baseline settings are true
+because the editor runs in a container, so no inherited value may overwrite one.
+
+| Setting | Why the host's answer is wrong inside the box |
+|---|---|
+| `security.workspace.trust.enabled: false` | The container is already the sandbox. Left on, the workspace opens in **Restricted Mode** and every language extension stays dormant |
+| `terminal.integrated.defaultProfile.linux` + a `bash` profile | The host may be Windows or macOS; the box is Linux, and an inherited profile leaves the terminal unable to open a shell |
+| `files.eol: "\n"` | A Windows host writes CRLF into a Linux container's build tree |
+| `telemetry.telemetryLevel: "off"` | Nothing in a disposable box should phone home |
+
+**Workspace trust is the one that costs a day.** It surfaces as a thin banner across the top —
+easy to dismiss unread — and the symptom is not "untrusted workspace", it is *no IntelliSense, no
+formatter, no debugger*, which reads exactly like the extension install having failed. You then go
+looking in the entrypoint log, where everything installed fine. Set it in the baseline, and confirm
+the banner is absent when you open the editor (Step 4).
 
 ## Where the config lives
 

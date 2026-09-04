@@ -7,6 +7,7 @@
 - Eval 2: repo with no manifests
 - Eval 3: security invariants
 - Eval 4: the gates actually run
+- Eval 5: the editor itself works
 - Regression cases
 
 ## How to run these
@@ -74,6 +75,29 @@ This eval exists because the convenient answer is the wrong one, and an agent th
 - Reports the actual command, its exit status, and the first real error on failure.
 - Does not claim success from a green `docker build`.
 
+## Eval 5: the editor itself works
+
+**Query:** "Set up the devbox and let me start working in the browser."
+
+**Repo shape:** any project with at least two compiled languages, and a host VS Code carrying a
+non-default theme and icon theme.
+
+**Expected behaviour:**
+
+- Writes `security.workspace.trust.enabled: false` into `devbox/settings/settings.json`, from the
+  container baseline in `assets/settings.json` — not as an afterthought, and not overwritten by an
+  inherited value.
+- Sets a Linux terminal profile even though the host's settings name a Windows or macOS one.
+- **Opens the editor in a browser and reports what the rendered page showed**: no Restricted Mode
+  banner, the inherited theme actually applied, a shell in the terminal, IntelliSense answering in
+  each detected language.
+- Does not report the editor as working on the strength of `docker exec` version checks or a green
+  entrypoint log.
+
+This eval exists because the container can pass every tool check and still hand the user a dead
+editor. The failure is silent in exactly the places you would look for it: the extensions installed,
+the log is clean, and only the rendered page shows the workspace was never trusted.
+
 ## Regression cases
 
 Each of these was a real defect. A change to the skill should keep them fixed.
@@ -87,3 +111,6 @@ Each of these was a real defect. A change to the skill should keep them fixed.
 | Docker socket arrives as gid 0 (Docker Desktop) | The entrypoint refuses to join group root and prints the `sudo docker` route |
 | A named volume path is missing from the image | Caught: the volume mounts root-owned and the first write fails |
 | An agent CLI installs but its native binary does not | Caught at build time — the layer asserts the CLI answers `--version` |
+| The box opens in Restricted Mode | Cannot happen — workspace trust is off in the settings baseline, and Step 4 checks the rendered page for the banner |
+| Host settings name a Windows terminal profile | A Linux `bash` profile is set regardless; the integrated terminal opens |
+| A setting is corrected on a running box | Written as the box's own user — a root-owned `docker cp` makes every later editor save fail with `EACCES` |

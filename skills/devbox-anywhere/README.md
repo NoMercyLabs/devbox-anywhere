@@ -209,7 +209,7 @@ devbox-anywhere/
 │   ├── toolchain.md                  base image choice, per-ecosystem blocks, failure modes
 │   ├── editor-inheritance.md         mining your editor config, first-party tooling, Open VSX ids
 │   ├── security.md                   invariants, the auth step in full, review checklist
-│   └── evaluations.md                four evaluations and the regression cases
+│   └── evaluations.md                five evaluations and the regression cases
 └── assets/                           templates copied into the project
     ├── Dockerfile
     ├── entrypoint.sh
@@ -217,6 +217,7 @@ devbox-anywhere/
     ├── docker-compose.yml
     ├── devcontainer.json
     ├── env.example
+    ├── settings.json                  editor settings: the container baseline to merge onto
     ├── project-readme.md
     └── Caddyfile.hosted.example
 ```
@@ -232,7 +233,8 @@ Each of these exists because the naive alternative was tried and failed.
 |---|---|
 | Extensions install at entrypoint, not build time | The extensions directory is a volume; a build-time install is shadowed the moment it mounts. |
 | The install marker is a hash of the list, not a flag | With a flag, the first list is frozen for the life of the volume and later edits are ignored with no error. |
-| Settings are copied once, not symlinked | So a tweak made in the editor sticks. |
+| Settings are copied once, not symlinked | So a tweak made in the editor sticks. Editing the committed file therefore does not reach a box that already ran — say so in the project README. |
+| Workspace trust is off in the settings baseline | The container is the sandbox. Left on, VS Code opens in Restricted Mode and every language extension stays dormant, which presents as a failed extension install rather than as an untrusted workspace. |
 | Caches live on named volumes | A rebuild must never re-download the dependency tree. On Docker Desktop the bind mount also crosses a VM boundary and is slow. |
 | Build output goes off the bind mount | Host and container builds sharing an output directory fail on file ownership and timestamps. |
 | Every volume path is created in the image | Docker seeds a named volume from the image path; if the path is missing, the volume mounts root-owned. |

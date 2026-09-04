@@ -63,7 +63,8 @@ block does and why.
 | `devbox/entrypoint.sh` | `assets/entrypoint.sh` | Verbatim — it is project-agnostic |
 | `devbox/auth-onboarding.sh` | `assets/auth-onboarding.sh` | Add a `check()`/`fix()` case for any tool the asset does not cover |
 | `devbox/docker-compose.yml` | `assets/docker-compose.yml` | Cache volumes for the detected ecosystems; publish the ports this project's dev servers bind |
-| `devbox/settings/settings.json`, `extensions.txt` | — | Inherited from the user's own editor, per [references/editor-inheritance.md](references/editor-inheritance.md) |
+| `devbox/settings/settings.json` | `assets/settings.json` | The container baseline first — workspace trust off, Linux terminal, LF — then the user's look and feel merged on top, per [references/editor-inheritance.md](references/editor-inheritance.md) |
+| `devbox/settings/extensions.txt` | — | Inherited then filtered to the detected stack, same reference. Open VSX ids |
 | `devbox/.env.example` | `assets/env.example` | |
 | `devbox/README.md` | `assets/project-readme.md` | |
 | `devbox/Caddyfile.hosted.example` | `assets/Caddyfile.hosted.example` | Only if the box will be shared |
@@ -83,17 +84,21 @@ fix each. It reports only: no credential is passed in, read, stored, or transmit
 signs in themselves inside the box. Full mechanism in
 [references/security.md](references/security.md).
 
-**The four things a fresh container silently lacks.** None announce themselves; each surfaces as a
+**The five things a fresh container silently lacks.** None announce themselves; each surfaces as a
 different, misleading failure:
 
-1. **Git identity** — mount the host `~/.gitconfig` read-only, or commits land under a name nobody
+1. **Workspace trust** — VS Code opens a container workspace in **Restricted Mode**, which keeps
+   every language extension dormant. The symptom is no IntelliSense and no formatter, so you go
+   hunting for a failed extension install that never happened. Set
+   `security.workspace.trust.enabled: false` in the settings baseline; the container is the sandbox.
+2. **Git identity** — mount the host `~/.gitconfig` read-only, or commits land under a name nobody
    recognises. On Windows and macOS hosts `~` does not expand as expected; expose a full-path
    override variable.
-2. **Forge credentials** — absent by design. The user logs in inside the box.
-3. **Memory** — a container sees the *host's* total RAM, so build daemons size their heaps for a
+3. **Forge credentials** — absent by design. The user logs in inside the box.
+4. **Memory** — a container sees the *host's* total RAM, so build daemons size their heaps for a
    machine they do not have and get OOM-killed, which surfaces as a *compiler crash*. Cap the
    daemons with environment variables **and** set `mem_limit`.
-4. **The agent's own CLI** — if the user works with one, install it and let it authenticate itself
+5. **The agent's own CLI** — if the user works with one, install it and let it authenticate itself
    in the box.
 
 ### Step 4: Build and verify
@@ -111,6 +116,21 @@ it. Fix what breaks, rebuild, re-verify.
 
 Report the version each tool actually printed. A tool that does not answer `--version` is not
 installed, whatever the build log said.
+
+**Then open the editor and look at it.** `docker exec` proves the toolchain; it says nothing about
+the editor the person will actually sit in, and every editor-side defect is silent by design. Load
+`http://localhost:<DEVBOX_PORT>`, sign in, and confirm on the rendered page:
+
+- **No Restricted Mode banner.** If it is there, the language extensions are dormant — fix the
+  trust setting, do not dismiss the banner.
+- The inherited **theme and icon theme actually rendered**, not the default — proof their provider
+  extensions resolved on Open VSX.
+- The status bar shows **no extension-activation errors**, and the integrated terminal opens a shell.
+- Open one file per detected language and confirm IntelliSense responds.
+
+When you correct a setting on a running box, edit it **as the box's own user**
+(`docker exec -u <user> …`). A `docker cp` writes the file owned by root, and the editor then fails
+every later save with `EACCES` — a break that outlives the fix it delivered.
 
 Two failures to expect the first time, both covered in
 [references/toolchain.md](references/toolchain.md): build output colliding with the host's, and a

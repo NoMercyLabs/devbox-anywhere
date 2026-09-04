@@ -92,6 +92,9 @@ socket is mounted, exposing the editor is exposing the host.
 - An extension → add its **Open VSX** id to `devbox/settings/extensions.txt`. The list is
   re-applied whenever that file changes, and an id Open VSX does not carry is skipped, never fatal.
   Removing an id does not uninstall it: use `code-server --uninstall-extension <id>`.
-- An editor setting → `devbox/settings/settings.json`. Copied on first start, so in-editor tweaks
-  stick.
+- An editor setting → `devbox/settings/settings.json`. Copied **only when the editor has no
+  settings file yet**, so in-editor tweaks stick — and editing this file changes nothing on a box
+  that already ran. Change both, or delete the box's copy and restart it. Leave the
+  container-baseline settings alone (workspace trust off, Linux terminal profile, LF endings):
+  they are true because this is a container, not personal taste.
 - Never bake a secret into the image.

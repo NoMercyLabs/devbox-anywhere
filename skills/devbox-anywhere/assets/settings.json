@@ -1,0 +1,42 @@
+// devbox/settings/settings.json — seeded into the editor on first start.
+//
+// Start from this file, then merge the user's inherited look and feel on top of it
+// (references/editor-inheritance.md). The settings BELOW are the container baseline: they are
+// true because the editor runs in a container, so they hold whatever the host's settings say.
+// Never let an inherited value overwrite one of them.
+{
+  // The container IS the sandbox. Left on, VS Code opens the workspace in Restricted Mode and
+  // every language extension stays dormant — no C#, no Kotlin, no formatter — behind one thin
+  // banner most people dismiss without reading. It looks like the extensions failed to install.
+  "security.workspace.trust.enabled": false,
+
+  // The host may be Windows or macOS; the box is Linux. An inherited Windows profile leaves the
+  // integrated terminal unable to open a shell at all.
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.profiles.linux": {
+    "bash": { "path": "/bin/bash" }
+  },
+
+  // A Windows host writes CRLF; the container's build tooling and the repo's .gitattributes
+  // expect LF. Pin it here rather than discovering it in a diff.
+  "files.eol": "\n",
+
+  // Nothing in a disposable container should phone home.
+  "telemetry.telemetryLevel": "off",
+
+  // --- from here down: inherited + project-derived -----------------------------------------
+  // Look and feel copied from the user's own editor; each theme/icon setting needs its provider
+  // extension in extensions.txt or it silently falls back to the default.
+  //   "workbench.colorTheme": "...",
+  //   "workbench.iconTheme": "...",
+  //   "editor.fontSize": ...,
+  //
+  // Excludes for the detected build output, so search and the file watcher ignore it:
+  //   "files.exclude" / "files.watcherExclude" / "search.exclude"
+  //
+  // Point editor.defaultFormatter at the project's OWN pinned formatter, per language, so
+  // format-on-save agrees with the commit gate instead of fighting it.
+  "editor.formatOnSave": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true
+}
