@@ -80,16 +80,23 @@ COPY auth-onboarding.sh /usr/local/bin/devbox-auth
 # them: /etc/profile.d covers login shells (Remote-SSH), /etc/bash.bashrc covers interactive
 # non-login shells - which is what the VS Code / code-server integrated terminal starts, so a
 # profile.d-only hook never fires for the person working in the browser.
-# The `$-` test is what makes the once-per-container marker safe: `[ -t 1 ]` alone is true for a
-# background `docker exec -t`, which then burns the marker and the user's own terminal shows
-# nothing. Only an interactive shell has `i` in `$-`.
+# The `$-` test is what makes the marker safe: `[ -t 1 ]` alone is true for a background
+# `docker exec -t`, which then burns it and the user's own terminal shows nothing. Only an
+# interactive shell has `i` in `$-`.
+# The marker is written only when NOTHING is pending. devbox-auth always exits 0 on purpose - it is
+# a report, not a gate - so the hook reads the count it leaves in /tmp/.devbox-auth-pending instead.
+# Gating on its exit status silently suppressed the report forever on the first terminal. While a
+# credential is still missing the report reappears in each new terminal, because a report shown once
+# to whichever shell happened to open first is a report the person never sees.
 RUN chmod +x /usr/local/bin/devbox-entrypoint /usr/local/bin/devbox-auth \
     && printf '%s\n' \
         'case $- in' \
         '  *i*)' \
         '    if [ -t 1 ] && [ ! -f /tmp/.devbox-auth-shown ]; then' \
-        '      touch /tmp/.devbox-auth-shown 2>/dev/null' \
-        '      devbox-auth || true' \
+        '      devbox-auth' \
+        '      if [ "$(cat /tmp/.devbox-auth-pending 2>/dev/null || echo 1)" = 0 ]; then' \
+        '        touch /tmp/.devbox-auth-shown 2>/dev/null' \
+        '      fi' \
         '    fi' \
         '    ;;' \
         'esac' \

@@ -109,6 +109,9 @@ Each of these was a real defect. A change to the skill should keep them fixed.
 | An extension is absent from Open VSX | Skipped with a message; the container still starts |
 | A background `docker exec` runs before the user opens a terminal | The auth report still appears in the user's first real terminal — the hook tests `$-` for `i`, since `docker exec -t` passes a TTY test and would otherwise burn the marker |
 | The user works in the browser editor rather than over SSH | The auth report appears — the hook is in `/etc/bash.bashrc` too, because the integrated terminal is an interactive non-login shell and never reads `/etc/profile.d` |
+| A credential is still missing when a second terminal opens | The report appears again — the marker is written only when the pending count is 0, never on "it was shown once" |
+| The hook gates on `devbox-auth`'s exit status | Cannot happen — the report always exits 0 by design, so the hook reads `/tmp/.devbox-auth-pending`; gating on `$?` suppressed the report permanently |
+| An extension needs a host binary it does not ship (todo-tree → ripgrep) | The binary is installed in the image and the setting points at it, instead of the extension erroring on activation |
 | Docker socket arrives as gid 0 (Docker Desktop) | The entrypoint refuses to join group root and prints the `sudo docker` route |
 | A named volume path is missing from the image | Caught: the volume mounts root-owned and the first write fails |
 | An agent CLI installs but its native binary does not | Caught at build time — the layer asserts the CLI answers `--version` |

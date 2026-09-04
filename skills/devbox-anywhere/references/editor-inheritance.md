@@ -153,6 +153,11 @@ Removing an id from the list does **not** uninstall it — the entrypoint only a
 person installed by hand in their own box survive a list change. Uninstall a dropped one with
 `code-server --uninstall-extension <id>`.
 
+**Some extensions need a binary the image does not have.** todo-tree ships no ripgrep for every
+platform and errors on first activation without one; the fix is `apt-get install ripgrep` plus
+`"todo-tree.ripgrep": "/usr/bin/rg"`, not dropping the extension. Check each kept extension for a
+native dependency and install it in the Dockerfile.
+
 The entrypoint tolerates a missing extension by design. After the first start, read the container
 log and confirm the ones that matter installed — a silently skipped theme is why the editor came
 up looking wrong.

@@ -88,6 +88,11 @@ done
 
 [ "$pending" -gt 0 ] && printf '\n%sSign in to the above inside this box%s - credentials created here stay here.\n\n' "$bold" "$off"
 
+# How many are still missing, for the shell hook to read. It cannot use the exit status: this is a
+# report, not a gate (see below), so a caller that gated on $? would suppress the report forever on
+# the first terminal - which is precisely the bug that hid it.
+printf '%s' "$pending" > /tmp/.devbox-auth-pending 2>/dev/null || true
+
 # Always succeeds. This is a report, not a gate: a missing login must not make the shell that ran
 # it look like it failed.
 exit 0
