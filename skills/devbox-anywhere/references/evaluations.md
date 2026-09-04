@@ -107,7 +107,8 @@ Each of these was a real defect. A change to the skill should keep them fixed.
 | Extension list edited after first start | Re-applied — the marker is a hash of the list, not a boolean |
 | Extension line carries a trailing `# comment` | Installed correctly — the annotation is stripped before the id is used |
 | An extension is absent from Open VSX | Skipped with a message; the container still starts |
-| A background `docker exec` runs before the user opens a terminal | The auth report still appears in the user's first real terminal — the hook is TTY-gated |
+| A background `docker exec` runs before the user opens a terminal | The auth report still appears in the user's first real terminal — the hook tests `$-` for `i`, since `docker exec -t` passes a TTY test and would otherwise burn the marker |
+| The user works in the browser editor rather than over SSH | The auth report appears — the hook is in `/etc/bash.bashrc` too, because the integrated terminal is an interactive non-login shell and never reads `/etc/profile.d` |
 | Docker socket arrives as gid 0 (Docker Desktop) | The entrypoint refuses to join group root and prints the `sudo docker` route |
 | A named volume path is missing from the image | Caught: the volume mounts root-owned and the first write fails |
 | An agent CLI installs but its native binary does not | Caught at build time — the layer asserts the CLI answers `--version` |

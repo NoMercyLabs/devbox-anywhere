@@ -76,15 +76,29 @@ COPY --chown=${USER_UID}:${USER_GID} settings/ /opt/devbox/settings/
 COPY entrypoint.sh /usr/local/bin/devbox-entrypoint
 COPY auth-onboarding.sh /usr/local/bin/devbox-auth
 
-# The login-shell hook that runs the auth report. Gated on a TTY: without that test, a background
-# `docker exec` consumes the once-per-container marker and the user's real terminal never shows the
-# report. The trailing `true` keeps the file's exit status zero so a shell with `set -e` in its
-# profile does not abort on a report that found nothing.
+# The hook that runs the auth report. Installed in TWO places because a shell reads only one of
+# them: /etc/profile.d covers login shells (Remote-SSH), /etc/bash.bashrc covers interactive
+# non-login shells - which is what the VS Code / code-server integrated terminal starts, so a
+# profile.d-only hook never fires for the person working in the browser.
+# The `$-` test is what makes the once-per-container marker safe: `[ -t 1 ]` alone is true for a
+# background `docker exec -t`, which then burns the marker and the user's own terminal shows
+# nothing. Only an interactive shell has `i` in `$-`.
 RUN chmod +x /usr/local/bin/devbox-entrypoint /usr/local/bin/devbox-auth \
     && printf '%s\n' \
-        '[ -t 1 ] && [ ! -f /tmp/.devbox-auth-shown ] && { touch /tmp/.devbox-auth-shown 2>/dev/null; devbox-auth; }' \
+        'case $- in' \
+        '  *i*)' \
+        '    if [ -t 1 ] && [ ! -f /tmp/.devbox-auth-shown ]; then' \
+        '      touch /tmp/.devbox-auth-shown 2>/dev/null' \
+        '      devbox-auth || true' \
+        '    fi' \
+        '    ;;' \
+        'esac' \
         'true' \
-        > /etc/profile.d/10-devbox-auth.sh
+        > /usr/local/etc/devbox-auth-hook.sh \
+    && ln -sf /usr/local/etc/devbox-auth-hook.sh /etc/profile.d/10-devbox-auth.sh \
+    && printf '\n. /usr/local/etc/devbox-auth-hook.sh\n' >> /etc/bash.bashrc
+. /usr/local/etc/devbox-auth-hook.sh
+' >> /etc/bash.bashrc
 
 USER ${USERNAME}
 WORKDIR /workspace

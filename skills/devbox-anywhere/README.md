@@ -232,6 +232,8 @@ Each of these exists because the naive alternative was tried and failed.
 | Decision | Because |
 |---|---|
 | Extensions install at entrypoint, not build time | The extensions directory is a volume; a build-time install is shadowed the moment it mounts. |
+| The auth hook is installed in `/etc/bash.bashrc` as well as `/etc/profile.d` | The integrated terminal starts an interactive **non-login** shell, which never reads `profile.d`. A profile.d-only hook fires for Remote-SSH and is invisible to everyone working in the browser. |
+| The hook tests `$-` for `i`, not just `[ -t 1 ]` | `docker exec -t` passes the TTY test, so a background exec burned the once-per-container marker and the user's own terminal showed nothing. |
 | The install marker is a hash of the list, not a flag | With a flag, the first list is frozen for the life of the volume and later edits are ignored with no error. |
 | Settings are copied once, not symlinked | So a tweak made in the editor sticks. Editing the committed file therefore does not reach a box that already ran — say so in the project README. |
 | Workspace trust is off in the settings baseline | The container is the sandbox. Left on, VS Code opens in Restricted Mode and every language extension stays dormant, which presents as a failed extension install rather than as an untrusted workspace. |
